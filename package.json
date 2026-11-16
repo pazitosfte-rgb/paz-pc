@@ -1,0 +1,36 @@
+{
+  "name": "pazitos-pos",
+  "productName": "Pazitos POS",
+  "version": "1.0.0",
+  "description": "Pañalera Pazitos - El Calafate (Punto de venta)",
+  "main": "main.js",
+  "author": "Pañalera Pazitos",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "electron": "31.7.7",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "ar.pazitos.pos",
+    "productName": "Pazitos POS",
+    "files": ["main.js", "preload.js", "offline.html", "package.json"],
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Pazitos POS"
+    },
+    "artifactName": "Pazitos-POS-${version}-${target}.${ext}"
+  }
+}
