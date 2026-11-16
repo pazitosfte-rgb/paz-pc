@@ -29,8 +29,11 @@
       "perMachine": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Pazitos POS"
+      "shortcutName": "Pazitos POS",
+      "artifactName": "Pazitos-POS-Instalador-${version}.${ext}"
     },
-    "artifactName": "Pazitos-POS-${version}-${target}.${ext}"
+    "portable": {
+      "artifactName": "Pazitos-POS-Portable-${version}.${ext}"
+    }
   }
 }
