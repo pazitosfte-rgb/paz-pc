@@ -1,0 +1,5 @@
+<!doctype html><html lang="es"><meta charset="utf-8"><title>Pazitos POS</title>
+<style>body{font-family:Segoe UI,Arial;background:#f5efe6;color:#4a3b2a;display:flex;height:100vh;margin:0;align-items:center;justify-content:center;text-align:center}
+button{background:#c8a45c;border:0;color:#fff;padding:12px 28px;border-radius:10px;font-size:16px;cursor:pointer;margin-top:18px}</style>
+<div><h1>Sin conexión</h1><p>No se pudo cargar Pazitos POS.<br>Revisá tu conexión a internet.</p>
+<button onclick="location.href='https://script.google.com/macros/s/AKfycbz-4Cgsi5D0-ho3JhQkiHF46VQ6eogns3KhWAbFM-TU-mUQ8Wi91WFKxikZ_dYe8pSbWw/exec'">Reintentar</button></div></html>
