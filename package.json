@@ -7,7 +7,7 @@
   "author": "Pañalera Pazitos",
   "scripts": {
     "start": "electron .",
-"dist": "electron-builder --win --x64 --publish never",
+    "dist": "electron-builder --win --x64 --publish never"
   },
   "devDependencies": {
     "electron": "31.7.7",
