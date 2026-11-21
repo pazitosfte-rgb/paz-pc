@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, shell, dialog, session } = require("electron");
+const { app, BrowserWindow, WebContentsView, Menu, shell, dialog, session, ipcMain } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
@@ -50,26 +50,67 @@ async function imprimir80(child) {
   }
 }
 
+// ---- Barra superior propia (zoom + refrescar) y vista de la aplicacion ----
+const ALTO_BARRA = 36;
+let vista = null; // WebContentsView con la web app (debajo de la barra)
+
+function rutaCfg() { return path.join(app.getPath("userData"), "config.json"); }
+function leerCfg() { try { return JSON.parse(fs.readFileSync(rutaCfg(), "utf8")); } catch (e) { return {}; } }
+function guardarCfg(o) { try { fs.writeFileSync(rutaCfg(), JSON.stringify(Object.assign(leerCfg(), o))); } catch (e) {} }
+
+function acomodarVista() {
+  if (!win || win.isDestroyed() || !vista) return;
+  const [w, h] = win.getContentSize();
+  vista.setBounds({ x: 0, y: ALTO_BARRA, width: w, height: Math.max(0, h - ALTO_BARRA) });
+}
+function zoomActual() { return vista && !vista.webContents.isDestroyed() ? vista.webContents.getZoomFactor() : 1; }
+function avisarZoom() { if (win && !win.isDestroyed() && !win.webContents.isDestroyed()) win.webContents.send("zoom", Math.round(zoomActual() * 100)); }
+function cambiarZoom(d) {
+  if (!vista) return;
+  let f = d === "reset" ? 1 : Math.round((zoomActual() + d) * 100) / 100;
+  f = Math.min(2.5, Math.max(0.5, f));
+  vista.webContents.setZoomFactor(f); guardarCfg({ zoom: f }); avisarZoom();
+}
+function recargar(forzado) {
+  if (!vista) return;
+  const wc = vista.webContents;
+  if (wc.getURL().startsWith("file:")) wc.loadURL(URL_APP);
+  else if (forzado) wc.reloadIgnoringCache(); else wc.reload();
+}
+
 function crear() {
   win = new BrowserWindow({
     width: 1400, height: 900, minWidth: 900, minHeight: 600,
-    show: false, title: "Pazitos POS", autoHideMenuBar: true,
+    show: false, title: "Pazitos POS", autoHideMenuBar: true, backgroundColor: "#0f766e",
     icon: path.join(__dirname, "build", "icon.png"),
-    webPreferences: { partition: "persist:pazitos", contextIsolation: true, nodeIntegration: false, sandbox: true }
+    // Barra de titulo propia: los botones de minimizar/maximizar/cerrar los dibuja Windows a la derecha
+    titleBarStyle: "hidden",
+    titleBarOverlay: { color: "#0f766e", symbolColor: "#ffffff", height: ALTO_BARRA },
+    webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, sandbox: true }
   });
-  win.maximize();
-  win.once("ready-to-show", () => win.show());
   Menu.setApplicationMenu(null);
+  win.loadFile(path.join(__dirname, "barra.html"));
+  win.webContents.on("did-finish-load", avisarZoom);
 
-  win.loadURL(URL_APP);
+  // La web app va en una vista debajo de la barra
+  vista = new WebContentsView({ webPreferences: { partition: "persist:pazitos", contextIsolation: true, nodeIntegration: false, sandbox: true } });
+  win.contentView.addChildView(vista);
+  ["resize", "maximize", "unmaximize", "enter-full-screen", "leave-full-screen", "restore"].forEach(ev => win.on(ev, acomodarVista));
+  win.maximize();
+  acomodarVista();
+  win.once("ready-to-show", () => { acomodarVista(); win.show(); });
 
-  win.webContents.on("did-fail-load", (e, code, desc, url, principal) => {
+  const wc = vista.webContents;
+  wc.loadURL(URL_APP);
+  wc.on("did-finish-load", () => { wc.setZoomFactor(leerCfg().zoom || 1); avisarZoom(); });
+
+  wc.on("did-fail-load", (e, code, desc, url, principal) => {
     if (!principal || code === -3) return;
-    win.loadFile(path.join(__dirname, "offline.html"), { query: { e: desc } });
+    wc.loadFile(path.join(__dirname, "offline.html"), { query: { e: desc } });
   });
 
   // Enlaces externos (WhatsApp, Instagram, etc.) -> navegador por defecto.
-  win.webContents.setWindowOpenHandler(({ url }) => {
+  wc.setWindowOpenHandler(({ url }) => {
     // Impresion directa de tiquets (80 mm): la pagina abre una ventana oculta "about:blank#print80"
     if (url.indexOf("#print80") !== -1) return { action: "allow", overrideBrowserWindowOptions: { show: false, width: 340, height: 700, autoHideMenuBar: true } };
     if (url.startsWith("blob:") || url.startsWith("data:")) return { action: "allow" };
@@ -77,32 +118,24 @@ function crear() {
     shell.openExternal(url);
     return { action: "deny" };
   });
-  win.webContents.on("will-navigate", (ev, url) => {
+  wc.on("will-navigate", (ev, url) => {
     if (url.startsWith("file:")) return;
     if (!esPropia(url)) { ev.preventDefault(); shell.openExternal(url); }
   });
 
-  // Atajos: F5 recarga, Ctrl+Shift+R recarga forzada, F11 pantalla completa, Ctrl +/- zoom
-  win.webContents.on("before-input-event", (ev, i) => {
+  // Atajos: F5 recarga, Ctrl+Shift+R recarga forzada, F11 pantalla completa, Ctrl +/- zoom, Ctrl 0 zoom normal
+  wc.on("before-input-event", (ev, i) => {
     if (i.type !== "keyDown") return;
     const c = i.control || i.meta;
-    if (i.key === "F5" || (c && i.key.toLowerCase() === "r")) {
-      ev.preventDefault();
-      if (win.webContents.getURL().startsWith("file:")) win.loadURL(URL_APP);
-      else i.shift ? win.webContents.reloadIgnoringCache() : win.webContents.reload();
-    } else if (i.key === "F11") {
-      ev.preventDefault(); win.setFullScreen(!win.isFullScreen());
-    } else if (c && (i.key === "+" || i.key === "=")) {
-      ev.preventDefault(); win.webContents.setZoomLevel(win.webContents.getZoomLevel() + 0.5);
-    } else if (c && i.key === "-") {
-      ev.preventDefault(); win.webContents.setZoomLevel(win.webContents.getZoomLevel() - 0.5);
-    } else if (c && i.key === "0") {
-      ev.preventDefault(); win.webContents.setZoomLevel(0);
-    }
+    if (i.key === "F5" || (c && i.key.toLowerCase() === "r")) { ev.preventDefault(); recargar(i.shift); }
+    else if (i.key === "F11") { ev.preventDefault(); win.setFullScreen(!win.isFullScreen()); }
+    else if (c && (i.key === "+" || i.key === "=")) { ev.preventDefault(); cambiarZoom(0.1); }
+    else if (c && i.key === "-") { ev.preventDefault(); cambiarZoom(-0.1); }
+    else if (c && i.key === "0") { ev.preventDefault(); cambiarZoom("reset"); }
   });
 
   // Ventana oculta de impresion: cuando la pagina le pone el titulo __PRINT80__ se imprime sin mostrar dialogo
-  win.webContents.on("did-create-window", (child, details) => {
+  wc.on("did-create-window", (child, details) => {
     if (String(details.url || "").indexOf("#print80") === -1) return;
     let hecho = false;
     child.webContents.on("page-title-updated", (e, title) => {
@@ -112,8 +145,12 @@ function crear() {
     setTimeout(() => { if (!hecho && !child.isDestroyed()) child.close(); }, 15000);
   });
 
-  win.on("closed", () => { win = null; });
+  win.on("closed", () => { try { if (vista && !vista.webContents.isDestroyed()) vista.webContents.close(); } catch (e) {} vista = null; win = null; });
 }
+
+// Botones de la barra superior (solo se aceptan ordenes de la propia barra)
+ipcMain.on("barra:zoom", (e, d) => { if (win && e.sender === win.webContents) cambiarZoom(d === "reset" ? "reset" : (Number(d) || 0)); });
+ipcMain.on("barra:refrescar", (e) => { if (win && e.sender === win.webContents) recargar(false); });
 
 app.whenReady().then(() => {
   // Descargas (PDF, etc.): pedir donde guardar y abrir al terminar.
