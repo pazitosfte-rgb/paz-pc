@@ -36,7 +36,7 @@ async function elegirImpresora(wc) {
 async function imprimir80(child) {
   const wc = child.webContents;
   try {
-    const alto = await wc.executeJavaScript("new Promise(function(r){var fin=function(){r(Math.ceil(document.documentElement.scrollHeight));};var im=Array.prototype.filter.call(document.images,function(i){return !i.complete;});if(!im.length)return fin();var n=im.length;im.forEach(function(i){i.onload=i.onerror=function(){if(--n<=0)fin();};});setTimeout(fin,4000);})");
+    const alto = await wc.executeJavaScript("new Promise(function(r){var fin=function(){r(Math.ceil(document.body.getBoundingClientRect().height));};var im=Array.prototype.filter.call(document.images,function(i){return !i.complete;});if(!im.length)return fin();var n=im.length;im.forEach(function(i){i.onload=i.onerror=function(){if(--n<=0)fin();};});setTimeout(fin,4000);})");
     const nombre = await elegirImpresora(wc);
     const micras = Math.max(40000, Math.round(alto * 25400 / 96) + 4000); // alto del contenido en micrones + margen
     wc.print({ silent: true, printBackground: true, deviceName: nombre, margins: { marginType: "none" }, pageSize: { width: 80000, height: micras } },
