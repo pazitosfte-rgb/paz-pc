@@ -1,10 +1,10 @@
 {
   "name": "pazitos-pos",
   "productName": "Pazitos POS",
-  "version": "1.1.0",
-  "description": "Pa\u00f1alera Pazitos - El Calafate (Punto de venta)",
+  "version": "1.2.0",
+  "description": "Pañalera Pazitos - El Calafate (Punto de venta)",
   "main": "main.js",
-  "author": "Pa\u00f1alera Pazitos",
+  "author": "Pañalera Pazitos",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --win --x64 --publish never"
@@ -19,6 +19,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "barra.html",
       "offline.html",
       "package.json"
     ],
