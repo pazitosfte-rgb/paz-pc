@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Pazitos POS</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0f766e; overflow: hidden; font-family: "Segoe UI", Arial, sans-serif; user-select: none; }
+  #barra { position: fixed; top: 0; left: 0; right: 0; height: 36px; display: flex; align-items: center; gap: 6px; box-sizing: border-box;
+           padding: 0 150px 0 12px; color: #fff; -webkit-app-region: drag; }
+  .titulo { font-weight: 700; font-size: 13px; letter-spacing: .02em; margin-right: auto; }
+  .grupo { display: flex; align-items: center; gap: 2px; background: rgba(255,255,255,.14); border-radius: 8px; padding: 2px; -webkit-app-region: no-drag; }
+  button { -webkit-app-region: no-drag; border: 0; background: transparent; color: #fff; height: 26px; min-width: 28px; padding: 0 8px; border-radius: 6px;
+           font-size: 15px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+  button:hover { background: rgba(255,255,255,.25); }
+  button:active { background: rgba(255,255,255,.4); }
+  #pct { font-size: 12px; min-width: 46px; }
+  svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+</style></head>
+<body>
+  <div id="barra">
+    <div class="titulo">Pazitos POS</div>
+    <div class="grupo" title="Zoom de la página">
+      <button id="menos" title="Alejar (Ctrl -)">&minus;</button>
+      <button id="pct" title="Volver al 100% (Ctrl 0)">100%</button>
+      <button id="mas" title="Acercar (Ctrl +)">+</button>
+    </div>
+    <div class="grupo">
+      <button id="refrescar" title="Refrescar la página (F5)"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg></button>
+    </div>
+  </div>
+<script>
+  document.getElementById("menos").onclick = function () { window.barra.zoom(-0.1); };
+  document.getElementById("mas").onclick = function () { window.barra.zoom(0.1); };
+  document.getElementById("pct").onclick = function () { window.barra.zoom("reset"); };
+  document.getElementById("refrescar").onclick = function () { window.barra.refrescar(); };
+  window.barra.onZoom(function (v) { document.getElementById("pct").textContent = v + "%"; });
+</script>
+</body></html>
